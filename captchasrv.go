@@ -3,12 +3,14 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"embed"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,7 +19,8 @@ import (
 	"time"
 )
 
-//go:generate go run gentmpl.go form success
+//go:embed form.html success.html
+var templateFS embed.FS
 
 var (
 	// Generate using e.g. “openssl rand -hex 32”.
@@ -38,6 +41,8 @@ var (
 		":8080",
 		"host:port to listen on for HTTP requests")
 )
+
+var templates = template.Must(template.New("").ParseFS(templateFS, "*.html"))
 
 func verifyCaptcha(response string) error {
 	resp, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify",
@@ -131,7 +136,7 @@ func fromHTTP(r *http.Request) (request, error) {
 }
 
 func writeForm(w http.ResponseWriter, msg string) {
-	if err := formTpl.Execute(w, struct {
+	if err := templates.ExecuteTemplate(w, "form.html", struct {
 		SiteKey string
 		Msg     string
 	}{
@@ -157,7 +162,7 @@ func main() {
 	var err error
 	hmacSecret, err = hex.DecodeString(*hmacSecretStr)
 	if err != nil {
-		log.Fatalf("Could not decode -hmac_secret=%q as hex string: %v", hmacSecretStr, err)
+		log.Fatalf("Could not decode -hmac_secret=%q as hex string: %v", *hmacSecretStr, err)
 	}
 
 	http.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
@@ -203,7 +208,7 @@ func main() {
 
 		purposeparts := strings.Split(string(req.purpose), ":")
 
-		if err := successTpl.Execute(w, struct {
+		if err := templates.ExecuteTemplate(w, "success.html", struct {
 			Purposeparts []string
 			Token        string
 		}{
