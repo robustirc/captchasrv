@@ -19,8 +19,11 @@ import (
 	"time"
 )
 
-//go:embed form.html success.html
+//go:embed font.css form.html success.html
 var templateFS embed.FS
+
+//go:embed font/*
+var staticFS embed.FS
 
 var (
 	// Generate using e.g. “openssl rand -hex 32”.
@@ -42,7 +45,7 @@ var (
 		"host:port to listen on for HTTP requests")
 )
 
-var templates = template.Must(template.New("").ParseFS(templateFS, "*.html"))
+var templates = template.Must(template.New("").ParseFS(templateFS, "*.html", "*.css"))
 
 func verifyCaptcha(response string) error {
 	resp, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify",
@@ -164,6 +167,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not decode -hmac_secret=%q as hex string: %v", *hmacSecretStr, err)
 	}
+
+	http.Handle("/font/", http.FileServer(http.FS(staticFS)))
 
 	http.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Frame-Options", "DENY")
