@@ -7,7 +7,7 @@ all:
 	@echo This Makefile is only for building docker containers.
 
 container:
-	go build
+	CGO_ENABLED=0 go build
 	# This list is from go/src/crypto/x509/root_unix.go.
 	install $(shell ls \
 /etc/ssl/certs/ca-certificates.crt \
@@ -18,4 +18,4 @@ container:
 /etc/pki/tls/cacert.pem \
 /etc/certs/ca-certificates.crt \
 2>&- | head -1) ca-certificates.crt
-	docker build --rm -t=robustirc/captchasrv .
+	docker build --no-cache --rm -t=robustirc/captchasrv .
